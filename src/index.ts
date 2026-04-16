@@ -1,19 +1,22 @@
-import { serve } from '@hono/node-server'
-import { OpenAPIHono } from '@hono/zod-openapi'
-import { InMemoryAssetRepository } from './store/inMemoryAssetRepository.js'
-import { assetRoutes } from './routes/assets.js'
+import { serve } from "@hono/node-server";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { Scalar } from "@scalar/hono-api-reference";
+import { InMemoryAssetRepository } from "./store/inMemoryAssetRepository.js";
+import { assetRoutes } from "./routes/assets.js";
 
-const repo = new InMemoryAssetRepository()
+const repo = new InMemoryAssetRepository();
 
-const app = new OpenAPIHono()
+const app = new OpenAPIHono();
 
-app.route('/asset', assetRoutes(repo))
+app.route("/asset", assetRoutes(repo));
 
-app.doc('/doc', {
-  openapi: '3.0.0',
-  info: { title: 'Asset API', version: '1.0.0' },
-})
+app.doc("/doc", {
+    openapi: "3.0.0",
+    info: { title: "Asset API", version: "1.0.0" },
+});
+
+app.get("/reference", Scalar({ url: "/doc" }));
 
 serve({ fetch: app.fetch, port: 3000 }, (info) => {
-  console.log(`Server is running on http://localhost:${info.port}`)
-})
+    console.log(`Server is running on http://localhost:${info.port}`);
+});
