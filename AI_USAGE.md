@@ -19,3 +19,21 @@ With Claude's implementation, there was two issues which I noticed. There wasn't
 # Documentation Addition
 
 To set it up early so it becomes a practice throughout the API, I added the `@hono/zod-openapi` and `scalar` for documentation. Claude scaffolded the documentation and types for use. Claude suggested a deprecated function again, the `apiReference()` middleware function which I replaced manually to `Scalar()`
+
+# Error Handling
+
+By default, the error handling returns the following response:
+
+```json
+{
+  "success": false,
+  "error": {
+    "name": "ZodError",
+    "message": "[\n  {\n    \"origin\": \"string\",\n    \"code\": \"too_small\",\n    \"minimum\": 1,\n    \"inclusive\": true,\n    \"path\": [\n      \"title\"\n    ],\n    \"message\": \"Too small: expected string to have >=1 characters\"\n  }\n]"
+  }
+}
+```
+
+This is response is not very friendly and also could theoreticaly be a security issue. The name ZodError makes the consumer aware that zod is used for validation meaning that it could be exploited. Also, the message returned is not very readable. I asked claude to address this:
+
+|  The response when a 400 returns a message but it's actually a string encoded object, can we fix that for the openapi definition?
