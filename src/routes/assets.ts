@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { AssetStatus, AssetType } from "../types/asset.js";
 import { type AssetRepository } from "../store/assetRepository.js";
 import { ValidationErrorSchema, validationHook } from "../middleware/validationHook.js";
+import { type ListAssetsFilter } from "../store/assetRepository.js";
 
 const AssetSchema = z
     .object({
@@ -20,6 +21,28 @@ const CreateAssetSchema = z
         type: z.enum([AssetType.VIDEO, AssetType.AUDIO]),
     })
     .openapi("CreateAsset");
+
+const listAssetsRoute = createRoute({
+    method: "get",
+    path: "/",
+    request: {
+        query: z.object({
+            status: z.enum([AssetStatus.PROCESSING, AssetStatus.READY]).optional(),
+            type: z.enum([AssetType.VIDEO, AssetType.AUDIO]).optional(),
+            title: z.string().optional(),
+            from: z.iso.datetime().optional(),
+            to: z.iso.datetime().optional(),
+            limit: z.coerce.number().int().min(1).max(100).optional(),
+            offset: z.coerce.number().int().min(0).optional(),
+        }),
+    },
+    responses: {
+        200: {
+            content: { "application/json": { schema: z.array(AssetSchema) } },
+            description: "List of assets",
+        },
+    },
+});
 
 const createAssetRoute = createRoute({
     method: "post",
@@ -44,6 +67,28 @@ const createAssetRoute = createRoute({
 
 export function assetRoutes(repo: AssetRepository) {
     const app = new OpenAPIHono({ defaultHook: validationHook });
+
+    app.openapi(listAssetsRoute, async (c) => {
+        const { status, type, title, from, to, limit, offset } = c.req.valid("query");
+        const filter: ListAssetsFilter = {
+            status,
+            type,
+            title,
+            from: from ? new Date(from) : undefined,
+            to: to ? new Date(to) : undefined,
+            limit,
+            offset,
+        };
+        const assets = await repo.list(filter);
+        return c.json(
+            assets.map((asset) => ({
+                ...asset,
+                createdAt: asset.createdAt.toISOString(),
+                updatedAt: asset.updatedAt.toISOString(),
+            })),
+            200,
+        );
+    });
 
     app.openapi(createAssetRoute, async (c) => {
         const input = c.req.valid("json");
