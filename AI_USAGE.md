@@ -15,3 +15,7 @@ Prompt:
 Typically with hono, you create a router for sub routes (i.e. `/assets/`) and mount it at the root router. Usually this is done in one file at execution time. Claude suggested a dependency injection technique. I asked Claude whether a singleton approach would be better, however it suggested that a DI method is easier for testing in isolation. It's a clever approach, combined with the abstract data repository interface it means the route doesn't have to know which storage stratery is active, it just calls the implemented methods.
 
 With Claude's implementation, there was two issues which I noticed. There wasn't a max length on the title, which means it's possible to pass very long strings which could cause unintented behaivour. Secondly, whilst not as severe as the first issue, `z.nativeEnum()` was used which is now deprecated.
+
+# Documentation Addition
+
+To set it up early so it becomes a practice throughout the API, I added the `@hono/zod-openapi` and `scalar` for documentation. Claude scaffolded the documentation and types for use. Claude suggested a deprecated function again, the `apiReference()` middleware function which I replaced manually to `Scalar()`
