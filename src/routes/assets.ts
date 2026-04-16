@@ -1,7 +1,10 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { AssetStatus, AssetType } from "../types/asset.js";
 import { type AssetRepository } from "../store/assetRepository.js";
-import { ValidationErrorSchema, validationHook } from "../middleware/validationHook.js";
+import {
+    ValidationErrorSchema,
+    validationHook,
+} from "../middleware/validationHook.js";
 import { type ListAssetsFilter } from "../store/assetRepository.js";
 
 const AssetSchema = z
@@ -27,9 +30,11 @@ const listAssetsRoute = createRoute({
     path: "/",
     request: {
         query: z.object({
-            status: z.enum([AssetStatus.PROCESSING, AssetStatus.READY]).optional(),
+            status: z
+                .enum([AssetStatus.PROCESSING, AssetStatus.READY])
+                .optional(),
             type: z.enum([AssetType.VIDEO, AssetType.AUDIO]).optional(),
-            title: z.string().optional(),
+            title: z.string().max(255).optional(),
             from: z.iso.datetime().optional(),
             to: z.iso.datetime().optional(),
             limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -69,7 +74,8 @@ export function assetRoutes(repo: AssetRepository) {
     const app = new OpenAPIHono({ defaultHook: validationHook });
 
     app.openapi(listAssetsRoute, async (c) => {
-        const { status, type, title, from, to, limit, offset } = c.req.valid("query");
+        const { status, type, title, from, to, limit, offset } =
+            c.req.valid("query");
         const filter: ListAssetsFilter = {
             status,
             type,
