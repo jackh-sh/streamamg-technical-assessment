@@ -9,6 +9,7 @@ import {
 import { type ListAssetsFilter } from "../store/assetRepository.js";
 import { type EventBus } from "../events/eventBus.js";
 import type { Asset } from "../types/asset.js";
+import { simulateEncoding } from "../encoding/encodingSimulator.js";
 
 const AssetSchema = z
     .object({
@@ -159,6 +160,7 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
         const input = c.req.valid("json");
         const asset = await repo.create(input);
         eventBus.emit("asset.created", asset);
+        simulateEncoding(repo, eventBus, asset);
         return c.json(
             {
                 ...asset,

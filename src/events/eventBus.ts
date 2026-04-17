@@ -2,6 +2,7 @@ import type { Asset } from "../types/asset.js";
 
 export interface AssetEvents {
     "asset.created": Asset;
+    "asset.ready": Asset;
 }
 
 export type AssetEventName = keyof AssetEvents;
