@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import { logger } from "hono/logger";
 import { InMemoryAssetRepository } from "./store/inMemoryAssetRepository.js";
 import { InMemoryEventBus } from "./events/inMemoryEventBus.js";
 import { assetRoutes } from "./routes/assets.js";
@@ -10,6 +11,7 @@ const eventBus = new InMemoryEventBus();
 
 const app = new OpenAPIHono();
 
+app.use(logger());
 app.route("/asset", assetRoutes(repo, eventBus));
 
 app.doc("/doc", {
