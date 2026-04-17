@@ -124,19 +124,25 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
 
     app.get("/events", (c) => {
         return streamSSE(c, async (stream) => {
-            const listener = async (asset: Asset) => {
-                await stream.writeSSE({
-                    event: "asset.created",
-                    data: JSON.stringify({
-                        ...asset,
-                        createdAt: asset.createdAt.toISOString(),
-                        updatedAt: asset.updatedAt.toISOString(),
-                    }),
+            const serialize = (asset: Asset) =>
+                JSON.stringify({
+                    ...asset,
+                    createdAt: asset.createdAt.toISOString(),
+                    updatedAt: asset.updatedAt.toISOString(),
                 });
+
+            const onCreated = async (asset: Asset) => {
+                await stream.writeSSE({ event: "asset.created", data: serialize(asset) });
             };
-            eventBus.on("asset.created", listener);
+            const onReady = async (asset: Asset) => {
+                await stream.writeSSE({ event: "asset.ready", data: serialize(asset) });
+            };
+
+            eventBus.on("asset.created", onCreated);
+            eventBus.on("asset.ready", onReady);
             await new Promise<void>((resolve) => stream.onAbort(resolve));
-            eventBus.off("asset.created", listener);
+            eventBus.off("asset.created", onCreated);
+            eventBus.off("asset.ready", onReady);
         });
     });
 
