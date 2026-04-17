@@ -6,6 +6,7 @@ import {
     validationHook,
 } from "../middleware/validationHook.js";
 import { type ListAssetsFilter } from "../store/assetRepository.js";
+import { type EventBus } from "../events/eventBus.js";
 
 const AssetSchema = z
     .object({
@@ -92,7 +93,7 @@ const createAssetRoute = createRoute({
     },
 });
 
-export function assetRoutes(repo: AssetRepository) {
+export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
     const app = new OpenAPIHono({ defaultHook: validationHook });
 
     app.openapi(listAssetsRoute, async (c) => {
@@ -137,9 +138,7 @@ export function assetRoutes(repo: AssetRepository) {
     app.openapi(createAssetRoute, async (c) => {
         const input = c.req.valid("json");
         const asset = await repo.create(input);
-
-        // We'll add
-
+        eventBus.emit("asset.created", asset);
         return c.json(
             {
                 ...asset,

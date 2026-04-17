@@ -2,13 +2,15 @@ import { describe, test, expect } from "@jest/globals";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { assetRoutes } from "./assets.js";
 import { InMemoryAssetRepository } from "../store/inMemoryAssetRepository.js";
+import { InMemoryEventBus } from "../events/inMemoryEventBus.js";
 import { AssetType, AssetStatus } from "../types/asset.js";
 
 function makeApp() {
     const repo = new InMemoryAssetRepository();
+    const eventBus = new InMemoryEventBus();
     const app = new OpenAPIHono();
-    app.route("/asset", assetRoutes(repo));
-    return { app, repo };
+    app.route("/asset", assetRoutes(repo, eventBus));
+    return { app, repo, eventBus };
 }
 
 describe("POST /asset", () => {
