@@ -56,8 +56,10 @@ const listAssetsRoute = createRoute({
 const getAssetRoute = createRoute({
     method: "get",
     path: "/:id",
+    summary: "Get asset",
+    description: "Retrieve a single asset by its ID.",
     request: {
-        params: z.object({ id: z.uuid() }),
+        params: z.object({ id: z.string() }),
     },
     responses: {
         200: {
