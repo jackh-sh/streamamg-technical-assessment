@@ -116,6 +116,24 @@ describe("GET /asset", () => {
         const res = await app.request("/asset?status=invalid");
         expect(res.status).toBe(400);
     });
+
+    test("filters by from date", async () => {
+        const { app, repo } = makeApp();
+        await repo.create({ title: "Old", type: AssetType.VIDEO });
+        const future = new Date(Date.now() + 60_000).toISOString();
+        const res = await app.request(`/asset?from=${encodeURIComponent(future)}`);
+        expect(res.status).toBe(200);
+        expect((await res.json()).length).toBe(0);
+    });
+
+    test("filters by to date", async () => {
+        const { app, repo } = makeApp();
+        await repo.create({ title: "New", type: AssetType.VIDEO });
+        const past = new Date(Date.now() - 60_000).toISOString();
+        const res = await app.request(`/asset?to=${encodeURIComponent(past)}`);
+        expect(res.status).toBe(200);
+        expect((await res.json()).length).toBe(0);
+    });
 });
 
 describe("GET /asset/:id", () => {
@@ -141,6 +159,63 @@ describe("GET /asset/:id", () => {
         const { app } = makeApp();
         const res = await app.request("/asset/not-a-uuid");
         expect(res.status).toBe(400);
+    });
+});
+
+describe("GET /asset/events", () => {
+    test("returns 200 with text/event-stream content type", async () => {
+        const { app } = makeApp();
+        const controller = new AbortController();
+        const res = await app.request("/asset/events", { signal: controller.signal });
+        expect(res.status).toBe(200);
+        expect(res.headers.get("content-type")).toContain("text/event-stream");
+        controller.abort();
+    });
+
+    test("streams asset.created event when an asset is posted", async () => {
+        const { app } = makeApp();
+        const controller = new AbortController();
+        const res = await app.request("/asset/events", { signal: controller.signal });
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+
+        await app.request("/asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "My Video", type: AssetType.VIDEO }),
+        });
+
+        const { value } = await reader.read();
+        const text = decoder.decode(value);
+
+        expect(text).toContain("event: asset.created");
+        expect(text).toContain("My Video");
+
+        controller.abort();
+        reader.cancel();
+    });
+
+    test("does not receive events after client disconnects", async () => {
+        const { app, eventBus } = makeApp();
+        const controller = new AbortController();
+        await app.request("/asset/events", { signal: controller.signal });
+        controller.abort();
+
+        // Allow onAbort to fire and clean up the listener
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        const listener = jest.fn();
+        eventBus.on("asset.created", listener);
+
+        await app.request("/asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "My Video", type: AssetType.VIDEO }),
+        });
+
+        // Only our explicit listener fires, not the disconnected SSE one
+        expect(listener).toHaveBeenCalledTimes(1);
+        eventBus.off("asset.created", listener);
     });
 });
 
