@@ -38,6 +38,14 @@ export class InMemoryAssetRepository implements AssetRepository {
         return this.assets.get(id);
     }
 
+    async update(id: string, patch: { status: AssetStatus }): Promise<Asset | undefined> {
+        const asset = this.assets.get(id);
+        if (!asset) return undefined;
+        const updated = { ...asset, ...patch, updatedAt: new Date() };
+        this.assets.set(id, updated);
+        return updated;
+    }
+
     async create(input: CreateAssetInput): Promise<Asset> {
         const now = new Date();
         const asset: Asset = {
