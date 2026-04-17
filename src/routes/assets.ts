@@ -46,6 +46,8 @@ const CreateAssetSchema = z
 const listAssetsRoute = createRoute({
     method: "get",
     path: "/",
+    summary: "List assets",
+    description: "Returns a paginated list of assets. Supports filtering by status, type, title (case-insensitive substring), and creation date range.",
     request: {
         query: z.object({
             status: z
@@ -91,9 +93,30 @@ const getAssetRoute = createRoute({
     },
 });
 
+const eventsRoute = createRoute({
+    method: "get",
+    path: "/events",
+    summary: "Stream asset events",
+    description: "Opens a Server-Sent Events stream. Emits `asset.created` when an asset is created and `asset.ready` when encoding completes.",
+    responses: {
+        200: {
+            content: {
+                "text/event-stream": {
+                    schema: z.string().openapi({
+                        example: "event: asset.created\ndata: {\"id\":\"dc7e2617-05ff-4c0a-9df2-c10373ab9037\",\"title\":\"Premier League Highlights\",\"type\":\"video\",\"status\":\"processing\"}\n\n",
+                    }),
+                },
+            },
+            description: "SSE stream of asset events",
+        },
+    },
+});
+
 const createAssetRoute = createRoute({
     method: "post",
     path: "/",
+    summary: "Create asset",
+    description: "Creates a new asset with status `processing`. An encoding simulation runs in the background and transitions the asset to `ready` after a short delay, emitting an `asset.ready` event on the SSE stream.",
     request: {
         body: {
             content: { "application/json": { schema: CreateAssetSchema } },
@@ -138,7 +161,7 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
         );
     });
 
-    app.get("/events", (c) => {
+    app.openapi(eventsRoute, (c) => {
         return streamSSE(c, async (stream) => {
             const serialize = (asset: Asset) =>
                 JSON.stringify({
