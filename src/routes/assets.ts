@@ -20,14 +20,28 @@ const AssetSchema = z
         createdAt: z.iso.datetime(),
         updatedAt: z.iso.datetime(),
     })
-    .openapi("Asset");
+    .openapi("Asset", {
+        example: {
+            id: "dc7e2617-05ff-4c0a-9df2-c10373ab9037",
+            title: "Premier League Highlights",
+            type: AssetType.VIDEO,
+            status: AssetStatus.READY,
+            createdAt: "2026-04-17T10:00:00.000Z",
+            updatedAt: "2026-04-17T10:00:05.000Z",
+        },
+    });
 
 const CreateAssetSchema = z
     .object({
         title: z.string().min(1).max(255),
         type: z.enum([AssetType.VIDEO, AssetType.AUDIO]),
     })
-    .openapi("CreateAsset");
+    .openapi("CreateAsset", {
+        example: {
+            title: "Premier League Highlights",
+            type: AssetType.VIDEO,
+        },
+    });
 
 const listAssetsRoute = createRoute({
     method: "get",
