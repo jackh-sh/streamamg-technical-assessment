@@ -45,3 +45,27 @@ Next, the list endpoint was added. When adding this endpoint, I intended to add 
 # Testing
 
 With testing, I asked claude to add some tests to test the creation and retrieving of assets. I also asked for some tests to cover the different filtering options.
+
+# Get Single Asset Endpoint
+
+I asked Claude to add a `GET /asset/:id` endpoint. It correctly identified that the `get(id)` method already existed on the `AssetRepository` interface and wired it up, returning 404 when not found and 400 for invalid UUIDs. Tests were added alongside.
+
+# Event Bus
+
+I asked Claude to investigate adding an event bus. It proposed a simple in-process `EventEmitter`-based approach. I pushed back and asked whether it was worth adding an interface first, in case we wanted to swap in an external broker (Redis, RabbitMQ, etc.) later. Claude agreed and implemented an `EventBus` interface alongside an `InMemoryEventBus` implementation — mirroring the same pattern already used for `AssetRepository`. The `asset.created` event is emitted after a successful POST. Tests were added to verify the event fires, doesn't fire on validation failure, and that `off` correctly removes listeners.
+
+# SSE Streaming Endpoint
+
+I asked Claude to add a `GET /asset/events` SSE endpoint that pushes events from the bus to connected clients. The route was registered before `/:id` to avoid "events" being matched as a UUID param. Claude initially used `stream.sleep(Number.MAX_SAFE_INTEGER)` to keep the connection open, which produced a Node.js `TimeoutOverflowWarning`. This was corrected by replacing the sleep loop with `await new Promise<void>((resolve) => stream.onAbort(resolve))`, which suspends the handler until the client disconnects and then cleans up the event listener.
+
+# Logging
+
+I asked Claude to add request logging to the Hono router. It used Hono's built-in `logger()` middleware, which logs method, path, status code, and response time for every request.
+
+# Encoding Simulator
+
+I asked Claude to add a feature where creating an asset triggers a status transition to `READY` after a simulated encoding delay. Claude added an `update` method to the `AssetRepository` interface and `InMemoryAssetRepository`, added `asset.ready` to the `EventBus` event map, and created an `encodingSimulator` that fires after a random 1–5 second timeout and emits `asset.ready`. The SSE endpoint was also missing `asset.ready` — it only forwarded `asset.created` — which was caught and fixed after I noticed no ready event was firing when creating an asset. To keep tests fast, the delay was made injectable rather than relying on fake timers, which `jest.runAllTimersAsync` (not available in Bun's Jest compat) would have required.
+
+# OpenAPI Path Parameter Bug
+
+After adding the get single asset endpoint, requests via the Scalar UI were returning 404 even when the asset existed in the list. I identified that the issue was with the `:id` syntax — `createRoute` had been defined using Hono's `:id` notation rather than OpenAPI's `{id}` notation. This caused the generated spec to contain the path `/asset/:id` literally, so Scalar was sending requests to `/asset/:id` instead of substituting the actual ID value. Changing the path to `/{id}` fixed the spec. Along the way, the path param validation was also relaxed from `z.uuid()` (Zod v4's strict variant regex was rejecting valid UUIDs) to `z.string()`, meaning unknown IDs now consistently return 404 rather than 400.
