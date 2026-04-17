@@ -34,10 +34,14 @@ By default, the error handling returns the following response:
 }
 ```
 
-This is response is not very friendly and also could theoreticaly be a security issue. The name ZodError makes the consumer aware that zod is used for validation meaning that it could be exploited. Also, the message returned is not very readable. I asked claude to address this:
+This is response is not very friendly and also could theoreticaly be a security issue. The name ZodError makes the consumer aware that zod is used for validation meaning it could be exploited. Also, the message returned is not very readable. I asked claude to address this:
 
 |  The response when a 400 returns a message but it's actually a string encoded object, can we fix that for the openapi definition?
 
 # Asset Filtering
 
 Next, the list endpoint was added. When adding this endpoint, I intended to add just a couple of filtering approaches. I asked Claude about what would be good filtering options that I missed. It said title (searching) and  limit / offset (pagination). I asked claude to implement these and also the other filtering stratergies using the data layer and having options there.
+
+# Testing
+
+With testing, I asked claude to add some tests to test the creation and retrieving of assets. I also asked for some tests to cover the different filtering options.
