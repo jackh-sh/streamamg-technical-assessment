@@ -134,10 +134,8 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
                 });
             };
             eventBus.on("asset.created", listener);
-            stream.onAbort(() => eventBus.off("asset.created", listener));
-            while (!stream.closed) {
-                await stream.sleep(30_000);
-            }
+            await new Promise<void>((resolve) => stream.onAbort(resolve));
+            eventBus.off("asset.created", listener);
         });
     });
 
