@@ -1,4 +1,4 @@
-import { describe, test, expect } from "@jest/globals";
+import { describe, test, expect, jest } from "@jest/globals";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { assetRoutes } from "./assets.js";
 import { InMemoryAssetRepository } from "../store/inMemoryAssetRepository.js";
@@ -141,5 +141,55 @@ describe("GET /asset/:id", () => {
         const { app } = makeApp();
         const res = await app.request("/asset/not-a-uuid");
         expect(res.status).toBe(400);
+    });
+});
+
+describe("EventBus", () => {
+    test("emits asset.created when an asset is created", async () => {
+        const { app, eventBus } = makeApp();
+        const listener = jest.fn();
+        eventBus.on("asset.created", listener);
+
+        await app.request("/asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "My Video", type: AssetType.VIDEO }),
+        });
+
+        expect(listener).toHaveBeenCalledTimes(1);
+        expect(listener.mock.calls[0][0]).toMatchObject({
+            title: "My Video",
+            type: AssetType.VIDEO,
+            status: AssetStatus.PROCESSING,
+        });
+    });
+
+    test("does not emit asset.created when creation fails validation", async () => {
+        const { app, eventBus } = makeApp();
+        const listener = jest.fn();
+        eventBus.on("asset.created", listener);
+
+        await app.request("/asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    test("off removes a listener", async () => {
+        const { app, eventBus } = makeApp();
+        const listener = jest.fn();
+        eventBus.on("asset.created", listener);
+        eventBus.off("asset.created", listener);
+
+        await app.request("/asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "My Video", type: AssetType.VIDEO }),
+        });
+
+        expect(listener).not.toHaveBeenCalled();
     });
 });
