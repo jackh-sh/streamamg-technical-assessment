@@ -49,6 +49,28 @@ const listAssetsRoute = createRoute({
     },
 });
 
+const getAssetRoute = createRoute({
+    method: "get",
+    path: "/:id",
+    request: {
+        params: z.object({ id: z.uuid() }),
+    },
+    responses: {
+        200: {
+            content: { "application/json": { schema: AssetSchema } },
+            description: "Asset found",
+        },
+        404: {
+            content: {
+                "application/json": {
+                    schema: z.object({ error: z.string() }).openapi("NotFound"),
+                },
+            },
+            description: "Asset not found",
+        },
+    },
+});
+
 const createAssetRoute = createRoute({
     method: "post",
     path: "/",
@@ -92,6 +114,22 @@ export function assetRoutes(repo: AssetRepository) {
                 createdAt: asset.createdAt.toISOString(),
                 updatedAt: asset.updatedAt.toISOString(),
             })),
+            200,
+        );
+    });
+
+    app.openapi(getAssetRoute, async (c) => {
+        const { id } = c.req.valid("param");
+        const asset = await repo.get(id);
+        if (!asset) {
+            return c.json({ error: "Asset not found" }, 404);
+        }
+        return c.json(
+            {
+                ...asset,
+                createdAt: asset.createdAt.toISOString(),
+                updatedAt: asset.updatedAt.toISOString(),
+            },
             200,
         );
     });

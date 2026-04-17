@@ -115,3 +115,29 @@ describe("GET /asset", () => {
         expect(res.status).toBe(400);
     });
 });
+
+describe("GET /asset/:id", () => {
+    test("returns the asset when it exists", async () => {
+        const { app, repo } = makeApp();
+        const created = await repo.create({ title: "My Video", type: AssetType.VIDEO });
+        const res = await app.request(`/asset/${created.id}`);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.id).toBe(created.id);
+        expect(body.title).toBe("My Video");
+    });
+
+    test("returns 404 when asset does not exist", async () => {
+        const { app } = makeApp();
+        const res = await app.request("/asset/00000000-0000-0000-0000-000000000000");
+        expect(res.status).toBe(404);
+        const body = await res.json();
+        expect(body.error).toBe("Asset not found");
+    });
+
+    test("returns 400 for invalid UUID", async () => {
+        const { app } = makeApp();
+        const res = await app.request("/asset/not-a-uuid");
+        expect(res.status).toBe(400);
+    });
+});
