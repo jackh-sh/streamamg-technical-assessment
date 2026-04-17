@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { streamSSE } from "hono/streaming";
 import { AssetStatus, AssetType } from "../types/asset.js";
 import { type AssetRepository } from "../store/assetRepository.js";
 import {
@@ -7,6 +8,7 @@ import {
 } from "../middleware/validationHook.js";
 import { type ListAssetsFilter } from "../store/assetRepository.js";
 import { type EventBus } from "../events/eventBus.js";
+import type { Asset } from "../types/asset.js";
 
 const AssetSchema = z
     .object({
@@ -117,6 +119,26 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
             })),
             200,
         );
+    });
+
+    app.get("/events", (c) => {
+        return streamSSE(c, async (stream) => {
+            const listener = async (asset: Asset) => {
+                await stream.writeSSE({
+                    event: "asset.created",
+                    data: JSON.stringify({
+                        ...asset,
+                        createdAt: asset.createdAt.toISOString(),
+                        updatedAt: asset.updatedAt.toISOString(),
+                    }),
+                });
+            };
+            eventBus.on("asset.created", listener);
+            stream.onAbort(() => eventBus.off("asset.created", listener));
+            while (!stream.closed) {
+                await stream.sleep(30_000);
+            }
+        });
     });
 
     app.openapi(getAssetRoute, async (c) => {
