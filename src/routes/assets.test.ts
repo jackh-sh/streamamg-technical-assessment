@@ -155,10 +155,10 @@ describe("GET /asset/:id", () => {
         expect(body.error).toBe("Asset not found");
     });
 
-    test("returns 400 for invalid UUID", async () => {
+    test("returns 404 for unknown id", async () => {
         const { app } = makeApp();
         const res = await app.request("/asset/not-a-uuid");
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(404);
     });
 });
 

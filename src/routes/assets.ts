@@ -55,7 +55,7 @@ const listAssetsRoute = createRoute({
 
 const getAssetRoute = createRoute({
     method: "get",
-    path: "/:id",
+    path: "/{id}",
     summary: "Get asset",
     description: "Retrieve a single asset by its ID.",
     request: {
@@ -134,10 +134,16 @@ export function assetRoutes(repo: AssetRepository, eventBus: EventBus) {
                 });
 
             const onCreated = async (asset: Asset) => {
-                await stream.writeSSE({ event: "asset.created", data: serialize(asset) });
+                await stream.writeSSE({
+                    event: "asset.created",
+                    data: serialize(asset),
+                });
             };
             const onReady = async (asset: Asset) => {
-                await stream.writeSSE({ event: "asset.ready", data: serialize(asset) });
+                await stream.writeSSE({
+                    event: "asset.ready",
+                    data: serialize(asset),
+                });
             };
 
             eventBus.on("asset.created", onCreated);
